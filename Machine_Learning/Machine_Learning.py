@@ -22,6 +22,9 @@ print(data.head(50))
 #1-3-1. feature extraction : PCA
 
 #1-3-2. feature selection : Filter, Wrapper, Embeded
+#1-3-2-1 Filter
+# https://ithelp.ithome.com.tw/articles/10245037
+
 # correlation matrix
 #1-3-3. standardize and normalize
 
