@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 # Pandas loc iloc https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.loc.html
 # SequentialFeatureSelector example http://rasbt.github.io/mlxtend/user_guide/feature_selection/SequentialFeatureSelector/#example-1-a-simple-sequential-forward-selection-example
 # sklearn.feature_selection.SequentialFeatureSelector API https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.SequentialFeatureSelector.html
+
 df = pd.read_csv('all_features_train_OneHot.csv')
 
 test = pd.read_csv('all_features_test_OneHot.csv')
@@ -22,19 +23,22 @@ test = pd.read_csv('all_features_test_OneHot.csv')
 X_train, X_test, y_train, y_test =  train_test_split(df, df['label'],
                      test_size=0.80,random_state = 1)
 
-Features_bf_filter = pd.read_csv('ROC_ANOVA_intersection_100in90.csv')
-type(Features_bf_filter.iloc[:,1].tolist())
-Features_bf_filter = Features_bf_filter.iloc[:,1].tolist()
-Features_bf_filter
+Features_af_filter = pd.read_csv('ROC_ANOVA_intersection_100in90.csv')
 
-X_train = X_train[Features_bf_filter]
-X_test = X_test[Features_bf_filter]
+type(Features_af_filter.iloc[:,1].tolist())
+
+Features_af_filter = Features_af_filter.iloc[:,1].tolist()
+Features_af_filter
+
+X_train = X_train[Features_af_filter]
+
+X_test = X_test[Features_af_filter]
 
 # direction='backward'
 
 # 2.1.2.1 sklearn.RandomForestClassifier() API https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
 # 1. 實體化向前包裝法 評分為'roc_auc'
-sfs = SequentialFeatureSelector(RandomForestClassifier(), direction='forward',scoring='roc_auc',)
+sfs = SequentialFeatureSelector(RandomForestClassifier(), direction='forward',scoring='roc_auc')
 # 2. 將資料fit的到向前包裝法
 sfs.fit(X_train, y_train)
 # 3. 將不需要的X特徵剔除
