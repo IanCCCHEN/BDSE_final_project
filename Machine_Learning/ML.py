@@ -177,7 +177,7 @@ print(roc_values.sort_values(ascending=False))
 #，這個方法剛開始時，特徵子集合是空集合，然後依序一次加入一個特徵。
 
 from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier #scikit learn API https://xgboost.readthedocs.io/en/latest/python/python_api.html#module-xgboost.sklearn
+from xgboost import XGBClassifier #scikit learn API https://xgboost.readthedocs.io/en/latest/python/python_api.html#module-xgboost.sklearn 
 from sklearn.svm import SVC
 from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.linear_model import LogisticRegression
@@ -194,6 +194,7 @@ X_train, X_test, y_train, y_test =  train_test_split(df, df['label'],
 
 Features_bf_filter = pd.read_csv('ROC_ANOVA_intersection_100in90.csv')
 type(Features_bf_filter.iloc[:,1].tolist())
+
 Features_bf_filter = Features_bf_filter.iloc[:,1].tolist()
 Features_bf_filter
 
@@ -249,24 +250,25 @@ sfs = SequentialFeatureSelector(RandomForestClassifier(), direction='backward',s
 sfs.fit(X_train, X_test)
 # 3. 將不需要的X特徵剔除
 dfsfs_RF_x = sfs.transform(X_train)
+feature_list = sfs.get_support()
 
 # 2.1.2.2 SVM (SVC)https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html?highlight=svm#sklearn.svm.SVC 
 sfs = SequentialFeatureSelector(SVC(gamma='auto'), direction='backward',scoring='roc_auc')
 sfs.fit(X_train, X_test)
 dfsfs_SVC_x = sfs.transform(X_train)
-
+feature_list = sfs.get_support()
 
 # 2.1.2.3 xgboost https://xgboost.readthedocs.io/en/latest/python/python_api.html#module-xgboost.sklearn
 sfs = SequentialFeatureSelector(XGBClassifier(), direction='backward',scoring='roc_auc')
 sfs.fit(X_train, X_test)
 dfsfs_xgboost_x = sfs.transform(X_train)
-
+feature_list = sfs.get_support()
 
 # 2.1.2.4 sklearn.linear_model.LogisticRegression API https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html?highlight=logisticregression#sklearn.linear_model.LogisticRegression
 sfs = SequentialFeatureSelector(LogisticRegression(), direction='backward',scoring='roc_auc')
 sfs.fit(X_train, X_test)
 dfsfs_LR_x = sfs.transform(X_train)
-
+feature_list = sfs.get_support()
 
 #2.1.3 竭盡式特徵選取法(Exhaustive Feature Selection)：這個方法測試所有可能的特徵組合。
 # from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
@@ -282,36 +284,76 @@ dfsfs_LR_x = sfs.transform(X_train)
 
 # 3.1 訓練模型
 
-# 3.1.1 (GBM) Gradient Tree Boosting https://scikit-learn.org/stable/modules/ensemble.html?highlight=gbm
+# 3.1.1 將filter與wrapper法 篩選的結果匯入
+import numpy as np
+import pandas as pd
+df = pd.read_csv('all_features_train_OneHot.csv')
+
+ X_train, X_test,  y_train, y_test =  train_test_split(df, df['label'],
+                     test_size=0.20,random_state = 1)
+
+Features_bf_filter = pd.read_csv('ROC_ANOVA_intersection_100in90.csv')
+type(Features_bf_filter.iloc[:,1].tolist())
+
+Features_bf_filter = Features_bf_filter.iloc[:,1].tolist()
+
+type(Features_bf_filter)
+X_train = X_train[Features_bf_filter]
+X_test = X_test[Features_bf_filter]
+
+# randomforest forward 結果 
+dflist = pd.read_csv('dfsfs_RF_forward_boolean.csv')
+dflist = dflist['0']
+X_train.columns[dflist]
+X_train = X_train[X_train.columns[dflist]]
+X_test = X_test[X_test.columns[dflist]]
+
+
+# 3.2.1 (GBM) Gradient Tree Boosting https://scikit-learn.org/stable/modules/ensemble.html?highlight=gbm
 # API https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier
 
-from sklearn.ensemble import GradientBoostingClassifier
-clf = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, max_depth=1, random_state=0)
-clf.fit(df_x, df_y)
-clf.score(df_x, df_y)
-print(clf.predict_proba(df_x))
-
-
+# from sklearn.ensemble import GradientBoostingClassifier
+# clf = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, max_depth=1, random_state=0)
+# clf.fit(df_x, df_y)
+# clf.score(df_x, df_y)
+# print(clf.predict_proba(df_x))
 from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(df_x, df_y, test_size=0.5, random_state=100)
+
 
 clf = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, max_depth=1, random_state=0)
 clf.fit(X_train,  y_train)
 clf.predict(X_test)
 
 clf.score(X_test, y_test)
-
 clf.predict_proba(X_train)
 
-#3.2.2 sklearn.model_selection.GridSearchCV 網格搜尋 
+#3.2.2 sklearn.ensemble.RandomForestClassifier API  https://scikit-learn.org/0.24/modules/generated/sklearn.ensemble.RandomForestClassifier.html?highlight=randomforest#sklearn.ensemble.RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
+clf = RandomForestClassifier(max_depth=2, random_state=0)
+clf.fit(X_train,  y_train)
+clf.predict(X_test)
+clf.predict_proba(X_test)
+clf.score(X_train, y_train)
+clf.score(X_test, y_test)
+
+#3.3.1 sklearn.model_selection.GridSearchCV 網格搜尋 
 # RandomizedSearchCV的使用方法其實是和GridSearchCV一致的 https://tw511.com/a/01/8581.html
 # https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-parameter
-from sklearn.model_selection import GridSearchCV
+# from sklearn.model_selection import GridSearchCV
 
-param_grid = {'loss':('deviance', 'exponential'),'n_estimators':range(100,300), 
-              'criterion':('friedman_mse', 'squared_error', 'mse', 'mae'),'max_depth':range(3,20)}
-model = GradientBoostingClassifier()
-clf = GridSearchCV(model, param_grid, cv=5, scoring='roc_auc')
-clf.fit(df_x, df_y)
-clf.score(X_test, y_test)
-GBM_para = clf.get_params(deep=True)
+# param_grid = {'loss':('deviance', 'exponential'),'n_estimators':range(100,300), 
+#               'criterion':('friedman_mse', 'squared_error', 'mse', 'mae'),'max_depth':range(3,20)}
+# model = GradientBoostingClassifier()
+# clf = GridSearchCV(model, param_grid, cv=5, scoring='roc_auc')
+# clf.fit(df_x, df_y)
+# clf.score(X_test, y_test)
+# GBM_para = clf.get_params(deep=True)
+
+#4 sklearn.metrics.plot_roc_curve API https://scikit-learn.org/stable/modules/generated/sklearn.metrics.plot_roc_curve.html
+
+import matplotlib.pyplot as plt
+from sklearn import metrics
+metrics.plot_roc_curve(clf, X_test, y_test) 
+
+plt.show()
