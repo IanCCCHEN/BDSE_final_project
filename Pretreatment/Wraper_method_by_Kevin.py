@@ -37,24 +37,27 @@ X_test = X_test[Features_af_filter]
 # direction='backward'
 
 # 2.1.2.1 sklearn.RandomForestClassifier() API https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
-# 1. 實體化向前包裝法 評分為'roc_auc'
+# 1. 實體化向前包裝法 (向後包裝法改變direction='backward') 評分為'roc_auc'
 sfs = SequentialFeatureSelector(RandomForestClassifier(), direction='forward',scoring='roc_auc')
 # 2. 將資料fit的到向前包裝法
 sfs.fit(X_train, y_train)
 # 3. 將不需要的X特徵剔除
+
+dfsfs_RF_feature = sfs.get_support()
 dfsfs_RF_x_train = sfs.transform(X_train)
 dfsfs_RF_x_test = sfs.transform(X_test)
-
 
 # 2.1.2.2 SVM (SVC)https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html?highlight=svm#sklearn.svm.SVC 
 sfs = SequentialFeatureSelector(SVC(gamma='auto'), direction='forward',scoring='roc_auc')
 sfs.fit(X_train, y_train)
+dfsfs_SVC_feature = sfs.get_support()
 dfsfs_SVC_x_train = sfs.transform(X_train)
 dfsfs_SVC_x_test = sfs.transform(X_test)
 
 # 2.1.2.3 xgboost https://xgboost.readthedocs.io/en/latest/python/python_api.html#module-xgboost.sklearn
 sfs = SequentialFeatureSelector(XGBClassifier(), direction='forward',scoring='roc_auc')
 sfs.fit(X_train, y_train)
+dfsfs_xgboost_feature = sfs.get_support()
 dfsfs_xgboost_x_train = sfs.transform(X_train)
 dfsfs_xgboost_x_test = sfs.transform(X_test)
 
@@ -66,9 +69,9 @@ dfsfs_xgboost_x_test = sfs.transform(X_test)
 # 0.0 .csv產生器 使Console不能打印的檔案可方便閱讀 
 # Generate CSV file      
 
-filename = dfsfs_RF_x_train  # 想要印出的程式碼 
+filename = dfsfs_xgboost_feature  # 想要印出的程式碼 
 
-Result ='dfsfs_RF_x_train_forward.csv' # 印出CSV.名稱  
+Result ='dfsfs_xgboost_feature.csv' # 印出CSV.名稱  
 def OutputCSV():   
       
     df_SAMPLE = pd.DataFrame.from_dict(filename)
