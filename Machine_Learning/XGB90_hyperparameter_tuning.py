@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 26 10:18:44 2021
-
-@author: Kevin Dai
-"""
 from xgboost import XGBClassifier #scikit learn API https://xgboost.readthedocs.io/en/latest/python/python_api.html#module-xgboost.sklearn 
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
