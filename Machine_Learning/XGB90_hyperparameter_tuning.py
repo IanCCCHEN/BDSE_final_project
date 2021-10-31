@@ -294,55 +294,258 @@ XGB = XGBClassifier(max_depth=2, booster='gbtree' , min_child_weight= 0.99999999
                     subsample=0.5700000000000001 ,gamma = 0, random_state=90)
 param_grid = {'colsample_bytree':np.arange(0.5,1.01,0.01)}
 GS = GridSearchCV(XGB, param_grid, cv=10)
-GS.fit(data, target)
-# train_data_importance
+# GS.fit(data, target)
+GS.fit(train_data_importance, target)
 best_param = GS.best_params_
 best_score = GS.best_score_
 print(best_param, best_score)
 GS.predict_proba(test87)
 #{'colsample_bytree': 0.9900000000000004} 0.44610744104356675  用原始的90_feature跑的
 
+#{'colsample_bytree': 0.9700000000000004} 0.4338430109952129  改成87_importance 跑的
+
+#10 用原始資料跑PCA 進行PCA 沒辦法選擇
+
+# import numpy as np
+# from sklearn.decomposition import PCA
+
+# param_grid = {'n_components':np.arange(80,100,1)}
+# PCAm = PCA()
+
+# GS = GridSearchCV(PCAm, param_grid, cv=2)
+# # newX = PCAm.fit_transform(X)
+# GS.fit(train_data, target)
+# best_param = GS.best_params_
+# best_score = GS.best_score_
+# print(best_param, best_score)
+# # 找出 {'n_components': 83} -15328.825896684333
+# PCA90 = PCA(n_components= 10)
+# PCA90.fit(train_data_importance)
+# PCA90.explained_variance_ratio_  #沒法選擇
+
+# 11. 標準化方式 - 結論使用RobustScaler 資料集中存在離群點，
+# 就需要利用RobustScaler針對離群點做標準化處理，該方法對資料中心化的資料的縮放更強的引數控制能力。
+# 也造成要全部重新調餐的問題
+
+from sklearn import preprocessing
+# 1.Max-Min
+#建立MinMaxScaler物件
+minmax = preprocessing.MinMaxScaler()
+# 資料標準化
+data_minmax = minmax.fit_transform(train_data_importance)
+#驗證
+XGB = XGBClassifier(max_depth=2, booster='gbtree' , min_child_weight= 0.9999999999999999,etc =0.3, 
+                    subsample=0.5700000000000001 ,gamma = 0, random_state=90)
+XGB.fit(data_minmax,target)
+# 對測試集進行預測並提交機率
+XGB.predict_proba(test87)
+# 0.57578 降低歐
+
+# 2. Z-Score
+#建立StandardScaler物件
+zscore = preprocessing.StandardScaler()
+# 資料標準化
+data_zs = zscore.fit_transform(train_data_importance)
+#驗證
+XGB = XGBClassifier(random_state=90)
+XGB.fit(data_zs,target)
+# 對測試集進行預測並提交機率
+XGB.predict_proba(test87)
+# 換成原始參數後 降得更低 0.54959
+# 用9步驟參數的話  0.57473
+
+# 3.MaxAbs
+
+#建立MinMaxScaler物件
+maxabs = preprocessing.MaxAbsScaler()
+# 資料標準化
+data_maxabs = maxabs.fit_transform(train_data_importance)
+#驗證
+XGB = XGBClassifier(max_depth=2, booster='gbtree' , min_child_weight= 0.9999999999999999,etc =0.3, 
+                    subsample=0.5700000000000001 ,gamma = 0, random_state=90)
+XGB.fit(data_maxabs,target)
+# 對測試集進行預測並提交機率
+XGB.predict_proba(test87)
+
+# 原始 0.57695
+# 用9步驟參數的話0.59309
+
+
+# 4.RobustScaler
+
+#建立RobustScaler物件
+robust = preprocessing.RobustScaler()
+# 資料標準化
+data_rob = robust.fit_transform(train_data_importance)
+#驗證
+XGB = XGBClassifier( random_state=90)
+XGB.fit(data_rob ,target)
+# 對測試集進行預測並提交機率
+XGB.predict_proba(test87)
+
+# 原始  0.59819
+# 用9步驟參數的話0.59819
+# 巧合都一樣
+
+# 12 更換使用 importance的87個變數專換成RobustScaler的資料集 對過往以調整過參數
+# 資料及名稱為 data_rob 
+# 再次進行條餐
+# 'colsample_bytree':np.arange(0.5,1.01,0.01),
+#2.               'min_child_weight':np.arange(0.5,1.5,0.1),
+#1.               'max_depth':np.arange(1,40,1),
+#3.               'gamma':np.arange(0.00,0.3,0.01),
+#4.               'subsample':np.arange(0.5,1.01,0.01),
+#5.               'colsample_bytree':np.arange(0.5,1.01,0.01)
+#               }
+
+# 12-1 用网格搜索调整max_depth
+XGB = XGBClassifier(booster='gbtree' ,etc =0.3, random_state=90)
+param_grid = {'max_depth':np.arange(1,40,1) }
+GS = GridSearchCV(XGB, param_grid, cv=10)
+GS.fit(data_rob , target)
+best_param = GS.best_params_
+best_score = GS.best_score_
+
+print(best_param, best_score)
+GS.predict_proba(test87)
+# {'max_depth': 1} 0.45940875342630616
+
+# 12-2 用网格搜索调整min_child_weight
+t1 = time.time()
+XGB = XGBClassifier(max_depth=1,booster='gbtree' ,etc =0.3, random_state=90)
+param_grid = {'min_child_weight':np.arange(0.5,1.5,0.1)}
+GS = GridSearchCV(XGB, param_grid, cv=10)
+GS.fit(data_rob , target)
+best_param = GS.best_params_
+best_score = GS.best_score_
+
+print(best_param, best_score)
+
+t2 = time.time()
+print('time elapsed: ' + str(round(t2-t1, 2)) + ' seconds')
+print('time elapsed: ' + str(t2-t1) + ' seconds')
+
+# {'min_child_weight': 0.5} 0.45940875342630616
+# time elapsed: 593.17 seconds
+# time elapsed: 593.1707291603088 seconds
+
+# 12-3 用网格搜索调整gamma
+t1 = time.time()
+XGB = XGBClassifier(min_child_weight=0.5,max_depth=1,booster='gbtree' ,etc =0.3, random_state=90)
+param_grid = { 'gamma':np.arange(0.00,0.3,0.01)}
+GS = GridSearchCV(XGB, param_grid, cv=10)
+GS.fit(data_rob , target)
+best_param = GS.best_params_
+best_score = GS.best_score_
+
+print(best_param, best_score)
+
+t2 = time.time()
+print('time elapsed: ' + str(round(t2-t1, 2)) + ' seconds')
+print('time elapsed: ' + str(t2-t1) + ' seconds')
+GS.predict_proba(test87)
+# {'gamma': 0.0} 0.45940875342630616
+# time elapsed: 1816.92 seconds
+# time elapsed: 1816.9240226745605 seconds
+
+# 12-4 用网格搜索调整subsample
+t1 = time.time()
+XGB = XGBClassifier(gamma=0,min_child_weight=0.5,max_depth=1,booster='gbtree' ,etc =0.3, random_state=90)
+param_grid = { 'subsample':np.arange(0.5,1.01,0.01)}
+GS = GridSearchCV(XGB, param_grid, cv=10)
+GS.fit(data_rob , target)
+best_param = GS.best_params_
+best_score = GS.best_score_
+
+print(best_param, best_score)
+
+t2 = time.time()
+print('time elapsed: ' + str(round(t2-t1, 2)) + ' seconds')
+print('time elapsed: ' + str(t2-t1) + ' seconds')
+GS.predict_proba(test87)
+# {'subsample': 0.53} 0.4709356503807167
+# time elapsed: 3781.42 seconds
+# time elapsed: 3781.423168897629 seconds
+
+# 12-5 用网格搜索调整colsample_bytree eval_metric auc
+t1 = time.time()
+XGB = XGBClassifier(eval_metric='auc' ,subsample=0.53,gamma=0,min_child_weight=0.5,max_depth=1,booster='gbtree' ,etc =0.3, random_state=90)
+param_grid = { 'colsample_bytree':np.arange(0.5,1.01,0.01)}
+GS = GridSearchCV(XGB, param_grid, cv=10)
+GS.fit(data_rob , target)
+best_param = GS.best_params_
+best_score = GS.best_score_
+
+print(best_param, best_score)
+
+t2 = time.time()
+print('time elapsed: ' + str(round(t2-t1, 2)) + ' seconds')
+print('time elapsed: ' + str(t2-t1) + ' seconds')
+GS.predict_proba(test87)
+
+# {'colsample_bytree': 0.5} 0.47733952392032936
+# time elapsed: 3714.61 seconds
+# time elapsed: 3714.608857154846 seconds
+
+
+# {'colsample_bytree': 0.5} 0.47733952392032936
+# time elapsed: 3641.82 seconds
+# time elapsed: 3641.8245639801025 seconds
 
 
 
+# 13. 用网格搜索调整colsample_bylevel
+t1 = time.time()
+XGB = XGBClassifier(colsample_bytree = 0.5,eval_metric='auc' ,subsample=0.53,gamma=0,min_child_weight=0.5,max_depth=1,booster='gbtree' ,etc =0.3, random_state=90)
+param_grid = { 'colsample_bylevel':np.arange(0.5,1.01,0.01)}
+GS = GridSearchCV(XGB, param_grid, cv=10)
+GS.fit(data_rob , target)
+best_param = GS.best_params_
+best_score = GS.best_score_
+
+print(best_param, best_score)
+
+t2 = time.time()
+print('time elapsed: ' + str(round(t2-t1, 2)) + ' seconds')
+print('time elapsed: ' + str(t2-t1) + ' seconds')
+GS.predict_proba(test87)
+# {'colsample_bylevel': 0.56} 0.4825188051356717
+# time elapsed: 2869.89 seconds
+# time elapsed: 2869.885647058487 seconds
+
+# 14 用网格搜索调整lambda
+t1 = time.time()
+XGB = XGBClassifier(colsample_bylevel= 0.56,colsample_bytree = 0.5,eval_metric='auc' ,subsample=0.53,gamma=0,min_child_weight=0.5,max_depth=1,booster='gbtree' ,etc =0.3, random_state=90)
+param_grid = { 'lambda':np.arange(0.5,1.01,0.01)}
+GS = GridSearchCV(XGB, param_grid, cv=10)
+GS.fit(data_rob , target)
+best_param = GS.best_params_
+best_score = GS.best_score_
+
+print(best_param, best_score)
+
+t2 = time.time()
+print('time elapsed: ' + str(round(t2-t1, 2)) + ' seconds')
+print('time elapsed: ' + str(t2-t1) + ' seconds')
+GS.predict_proba(test87)
+
+# {'lambda': 0.8300000000000003} 0.48252505279280034
+# time elapsed: 2807.2 seconds
+# time elapsed: 2807.204931974411 seconds
 
 
+# 14 用网格搜索调整max_depth 
+t1 = time.time()
+XGB = XGBClassifier(colsample_bylevel= 0.56,colsample_bytree = 0.5,eval_metric='auc' ,subsample=0.53,gamma=0,min_child_weight=0.5,max_depth=1,booster='gbtree' ,etc =0.3, random_state=90)
+param_grid = { 'max_depth':np.arange(3,30,1)}
+GS = GridSearchCV(XGB, param_grid, cv=15)
+GS.fit(data_rob , target)
+best_param = GS.best_params_
+best_score = GS.best_score_
 
-# # 0.0 .csv產生器 使Console不能打印的檔案可方便閱讀 
-# Generate CSV file      
+print(best_param, best_score)
 
-filename =  GS.predict_proba(test87) # 想要印出的程式碼 
-
-Result ='8_87.csv' # 印出CSV.名稱  
-def OutputCSV():   
-      
-    df_SAMPLE = pd.DataFrame.from_dict(filename)
-    df_SAMPLE.to_csv( Result  , index= True )
-    print( '成功產出'+Result )
-
-OutputCSV()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-filename = XGB.predict_proba(test)   # 想要印出的程式碼 
-
-Result ="XGBClassifier(max_depth=2,booster='gbtree',eta=0.01, min_child_weight= 0.9999999999999999,random_state=90).csv" # 印出CSV.名稱  
-def OutputCSV():   
-      
-    df_SAMPLE = pd.DataFrame.from_dict(filename)
-    df_SAMPLE.to_csv( Result  , index= True )
-    print( '成功產出'+Result )
-
-OutputCSV()
+t2 = time.time()
+print('time elapsed: ' + str(round(t2-t1, 2)) + ' seconds')
+print('time elapsed: ' + str(t2-t1) + ' seconds')
+GS.predict_proba(test87)
