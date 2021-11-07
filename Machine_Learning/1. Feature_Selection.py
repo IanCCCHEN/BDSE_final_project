@@ -243,3 +243,83 @@ sfs = SequentialFeatureSelector(LogisticRegression(), direction='backward',scori
 sfs.fit(X_train, X_test)
 dfsfs_LR_x = sfs.transform(X_train)
 feature_list = sfs.get_support()
+
+
+#2.5 PCA 
+df = pd.read_csv('all_features_train_OneHot.csv')
+test = pd.read_csv('all_features_test_OneHot.csv')
+
+#2.5.1 PCA 降為 嘗試在使用RobustScaler物件
+
+from sklearn.preprocessing import RobustScaler
+robust = RobustScaler()
+
+# 1. 資料標準化
+test.columns
+train_robust = robust.fit_transform(df.iloc[:,3:])
+test_rebust= robust.transform(test.iloc[:,3:])
+
+# 2. 取得特爭執
+from sklearn.decomposition import PCA
+
+pca = PCA()
+X_train_pca = pca.fit_transform(train_robust)
+pca.explained_variance_ratio_
+
+# 3. 列出並排序全部的特徵值
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.bar(range(200), pca.explained_variance_ratio_[:200], alpha=0.5, align='center')
+plt.step(range(200), np.cumsum(pca.explained_variance_ratio_[:200]), where='mid')
+plt.hlines(0.8,30,200,color="red")
+plt.text(0.8,0.8, '80%', ha ='left', va ='center') 
+plt.hlines(0.9,30,200,label ="black line")
+plt.text(0.8,0.9, '90%', ha ='left', va ='center') 
+plt.ylabel('Explained variance ratio')
+plt.xlabel('Principal components')
+
+plt.show()
+
+# 2.5.2 PCA 降為 嘗試在使用StandardScaler
+# 标准差标准化（standardScale）使得经过处理的数据符合标准正态分布，即均值为0，标准差为1，其转化函数为
+from sklearn.preprocessing import StandardScaler
+
+zscore = StandardScaler()
+
+# 1. 資料標準化
+test.columns
+train_zscore = zscore.fit_transform(df.iloc[:,3:])
+test_zscore= zscore.transform(test.iloc[:,3:])
+
+# 2. 取得特爭執
+from sklearn.decomposition import PCA 
+pca = PCA()
+X_train_pca = pca.fit_transform(train_zscore)
+pca.explained_variance_ratio_
+
+
+# 3. 列出並排序全部的特徵值
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.bar(range(200), pca.explained_variance_ratio_[:200], alpha=0.5, align='center')
+plt.step(range(200), np.cumsum(pca.explained_variance_ratio_[:200]), where='mid')
+plt.ylabel('xo4ru Explained variance ratio')
+plt.xlabel('Principal components')
+
+plt.show()
+
+# 4. 轉化 PCA 成 train
+
+pca = PCA(n_components=160)
+X_train_pca = pca.fit_transform(df.iloc[:,3:])
+X_test_pca = pca.transform(test.iloc[:,3:])
+
+
+# 5. 驗證 
+XGB = XGBClassifier(eval_metric='auc' ,booster='gbtree' ,etc =0.3, random_state=90)
+XGB.fit(X_train_pca,target)
+XGB.predict_proba(X_test_pca)
+
+
